@@ -1,0 +1,15 @@
+.LoanInput {
+    display: flex;
+    flex-flow: column;
+    width: 95%;
+    text-align: center;
+    align-items: center;
+    margin: 20px;
+    padding: 20px 10px 10px 10px;
+    border: 1px solid #444;
+    box-sizing: border-box;
+}
+
+.LoanInput input {
+    margin: 0 0 5px;
+}
