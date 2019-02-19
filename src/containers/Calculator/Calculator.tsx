@@ -1,8 +1,9 @@
 import React from 'react';
 
 import LoanInput from '../../components/LoanInput/LoanInput';
+import PaymentTable from '../../components/PaymentTable/PaymentTable';
 
-interface LoanState {
+export interface LoanState {
     principal: number;
     interestRate: number;
     loanLength: number;
@@ -46,7 +47,7 @@ class Calculator extends React.Component {
             const numerator = rate * P;
             // const denominator = Math.pow((1 + rate), months) - 1;
             const denominator = 1 - Math.pow((1 + rate), -months);
-            console.log(numerator, denominator, numerator / denominator);
+            // console.log(numerator, denominator, numerator / denominator);
 
             monthly = numerator / denominator;
         }
@@ -106,6 +107,7 @@ class Calculator extends React.Component {
                     }</div>
                 {/* <div>Total Payment: {(loan.loanMonthlyPayment * loan.loanLength).toFixed(2)}</div> */}
                 <button style={{ margin: "10px" }} onClick={this.addLoan}>Add Loan</button>
+                <PaymentTable loans={this.state.loans} />
             </>
         )
     }
