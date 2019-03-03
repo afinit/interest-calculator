@@ -11,8 +11,9 @@ export interface LoanState {
     [key: string]: number;
 }
 
-interface CalculatorState {
+export interface CalculatorState {
     loans: Array<LoanState>;
+    additionalPayment: number;
 }
 
 class Calculator extends React.Component {
@@ -24,10 +25,11 @@ class Calculator extends React.Component {
                 loanLength: 1,
                 loanMonthlyPayment: 0,
             },
-        ]
+        ],
+        additionalPayment: 0,
     }
 
-    onChangeInput = (field: string, newValue: number, idx: number) => {
+    onChangeLoanInput = (field: string, newValue: number, idx: number) => {
         this.setState((prevState: CalculatorState) => {
             const prevLoan = [...prevState.loans];
             prevLoan[idx][field] = newValue;
@@ -35,6 +37,10 @@ class Calculator extends React.Component {
             prevLoan[idx] = newLoan;
             return { loans: prevLoan };
         })
+    }
+
+    onChangePayment = (value: number) => {
+        this.setState({ additionalPayment: value })
     }
 
     calculateMonthlyPayment = (loan: LoanState) => {
@@ -58,15 +64,17 @@ class Calculator extends React.Component {
 
     addLoan = () => {
         this.setState((prevState: CalculatorState) => (
-            {loans: [
-                ...prevState.loans,
-                {
-                    principal: 0,
-                    interestRate: 0,
-                    loanLength: 1,
-                    loanMonthlyPayment: 0, 
-                }
-            ]}
+            {
+                loans: [
+                    ...prevState.loans,
+                    {
+                        principal: 0,
+                        interestRate: 0,
+                        loanLength: 1,
+                        loanMonthlyPayment: 0,
+                    }
+                ]
+            }
         ))
     }
 
@@ -74,13 +82,13 @@ class Calculator extends React.Component {
         this.setState((prevState: CalculatorState) => {
             const newLoans = [...prevState.loans];
             newLoans.splice(idx, 1);
-            return {loans: newLoans};
+            return { loans: newLoans };
         })
     }
 
     componentDidMount() {
         this.setState((prevState: CalculatorState) => (
-            { loans: prevState.loans.map( loan => this.calculateMonthlyPayment(loan) ) })
+            { loans: prevState.loans.map(loan => this.calculateMonthlyPayment(loan)) })
         )
     }
 
@@ -88,7 +96,7 @@ class Calculator extends React.Component {
         const loans = this.state.loans;
         return (
             <>
-                {loans.map ( (loan, idx) =>
+                {loans.map((loan, idx) =>
                     <LoanInput
                         key={idx}
                         idx={idx}
@@ -96,18 +104,27 @@ class Calculator extends React.Component {
                         interestRate={loan.interestRate}
                         loanLength={loan.loanLength}
                         monthlyPayment={loan.loanMonthlyPayment}
-                        onChangeInput={this.onChangeInput}
+                        onChangeInput={this.onChangeLoanInput}
                         removeLoan={this.removeLoan}
                     />
                 )}
+                <div>
+                    Additional Payment:
+                    <input
+                            type="number"
+                            value={this.state.additionalPayment}
+                            onChange={(event) => this.onChangePayment(+event.target.value)}
+                            min="0"
+                            step="1" />
+                </div>
                 <div>Total Monthly Payment: {
                     loans.map(loan => loan.loanMonthlyPayment)
                         .reduce((total, monthly) => total + monthly)
                         .toFixed(2)
-                    }</div>
+                }</div>
                 {/* <div>Total Payment: {(loan.loanMonthlyPayment * loan.loanLength).toFixed(2)}</div> */}
                 <button style={{ margin: "10px" }} onClick={this.addLoan}>Add Loan</button>
-                <PaymentTable loans={this.state.loans} />
+                <PaymentTable loans={this.state.loans} additionalPayment={this.state.additionalPayment} />
             </>
         )
     }
