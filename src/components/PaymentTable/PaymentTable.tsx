@@ -13,71 +13,121 @@ interface LoanTrack {
     [key: string]: number;
 }
 
-const calculatePayment = (totalPayment: number, principal: number, interestPayment: number) => {
-    let payment = totalPayment - interestPayment;
-    let addtlLeft = totalPayment;
-
-    if (principal - payment < 0.005) {
-        payment = principal;
-        addtlLeft -= payment + interestPayment;
-    }
-    else {
-        addtlLeft = 0;
-    }
-
-    return {payment, addtlLeft}
+const createLoanTrackCopies = (loans: Array<LoanTrack>) => {
+    return loans.map(loan => {
+        return {
+            principal: loan.principal,
+            interestRate: loan.interestRate,
+            loanLength: loan.loanLength,
+            loanMonthlyPayment: loan.loanMonthlyPayment,
+            interestPayment: 0,
+            principalPayment: 0,
+            totalPayment: 0
+        }
+    })
 }
 
-const reduceLoanState = (acc: {loans: Array<LoanState>, additionalPayment: number}, loan: LoanTrack) => {
-    let additionalPayment = acc.additionalPayment + loan.loanMonthlyPayment;
-    if (loan.principal > 0) {
-        loan.interestPayment = loan.interestRate * loan.principal / 12.0;
-        const paymentInfo = calculatePayment(additionalPayment, loan.principal, loan.interestPayment);
-        loan.principalPayment = paymentInfo.payment;
-        additionalPayment = paymentInfo.addtlLeft;
+const applyPayment = (loan: LoanTrack, payment: number) => {
+    const loanCopy = {...loan};
+    let appliedPayment = payment;
 
-        loan.principal -= loan.principalPayment;
-        loan.totalPayment = loan.principalPayment + loan.interestPayment;
-        console.log(
-            "interest: ", loan.interestPayment, 
-            " principal: ", loan.principal, 
-            " principalPayment: ", loan.principalPayment, 
-            " payment: ", additionalPayment);
+    if (loanCopy.principal < appliedPayment) appliedPayment = loanCopy.principal;
+
+    loanCopy.principal -= appliedPayment;
+    loanCopy.principalPayment += appliedPayment;
+    loanCopy.totalPayment += appliedPayment;
+
+    return loanCopy;
+}
+
+const applyRawPayment = (loan: LoanTrack) => {
+    let payment = 0;
+    let interestPayment = 0;
+
+    if (loan.principal > 0) {
+        interestPayment = loan.interestRate * loan.principal / 12.0;
+        payment = loan.loanMonthlyPayment - interestPayment;
+        if (payment > loan.principal) payment = loan.principal;
     }
-    else {
-        loan.interestPayment = 0;
-        loan.principalPayment = 0;
-        loan.totalPayment = 0;
+
+    const adjLoan = applyPayment(loan, payment);
+    adjLoan.interestPayment = interestPayment;
+    adjLoan.totalPayment += interestPayment;
+
+    return adjLoan;
+}
+
+const applyAdditionalPayment = (loans: Array<LoanTrack>, payment: number) => {
+    const adjLoans = [];
+    let paymentLeft = payment;
+
+    for (let i = 0; i <= loans.length; i++) {
+        const adjLoan = applyPayment(loans[i], paymentLeft);
+        paymentLeft -= loans[i].principal - adjLoan.principal;
+        adjLoans.push(adjLoan)
     }
-    return { loans: [...acc.loans, { ...loan }], additionalPayment: additionalPayment };
+
+    return adjLoans;
+}
+
+const applyAdditionalPaymentReduce = (acc: {loans: Array<LoanTrack>, payment: number}, loan: LoanTrack) => {
+    const adjLoan = applyPayment(loan, acc.payment);
+    const payment = acc.payment - (loan.principal - adjLoan.principal);
+
+    return {loans: acc.loans.concat(adjLoan), payment};
 }
 
 const paymentTable = (props: CalculatorState) => {
     const loansCopy: Array<LoanState> = JSON.parse(JSON.stringify(props.loans));
-    const loans = loansCopy.map((loan: LoanState) => {
+    const loanTrack: Array<LoanTrack> = loansCopy.map((loan: LoanState) => {
         return { ...loan, interestPayment: 0, principalPayment: 0, totalPayment: 0 }
+    })
+    .sort((a, b) => {
+        if(a.interestRate > b.interestRate) return -1
+        else if (a.interestRate < b.interestRate) return 1
+        else return 0
     });
     // const interestRates = props.loans.map(loan => loan.interestRate);
     // const loanIdxSorted = interestRates.map((rate, idx) => [rate, idx])
     //     .sort((a,b) => a[0] - b[0])
     //     .map(x => x[1]);
 
-    var monthlyUpdates = [];
+    let monthlyUpdates: Array<Array<LoanTrack>> = [];
 
     // var totalPrincipal = loans.map(loan => loan.principal).reduce((acc, elem) => acc + elem);
-    const longestLoan = Math.max(...loans.map(loan => loan.loanLength))
+    const longestLoan = Math.max(...loanTrack.map(loan => loan.loanLength))
     console.log("longestLoan: ", longestLoan);
 
-    for (var i = 0; i < longestLoan; i++) {
-        // TODO:: Remove side-effects from this process.. currently we are modifying loans on every iteration of this
-        monthlyUpdates.push(loans.reduce( reduceLoanState, {loans: [], additionalPayment: props.additionalPayment}).loans);
-        // totalPrincipal = loans.map(loan => loan.principal).reduce((acc, elem) => acc + elem);
+    for (let i = 0; i < longestLoan; i++) {
+        let loanTrackCopy: Array<LoanTrack> = monthlyUpdates.length === 0 ? 
+            createLoanTrackCopies(loanTrack) : 
+            createLoanTrackCopies(monthlyUpdates[monthlyUpdates.length - 1]);
+
+        console.log(i, loanTrackCopy)
+
+        // apply array of raw payment to each loan
+        loanTrackCopy = loanTrackCopy.map(applyRawPayment);
+        console.log(i, loanTrackCopy)
+
+        // calculate remainder payment from paid off loans.. combine with props.additionalPayment
+        const leftOverPaymentSum = loanTrackCopy.reduce(
+            (acc, loan) =>
+                (loan.loanMonthlyPayment - loan.totalPayment) > 0.005 ?
+                    acc + loan.loanMonthlyPayment - loan.totalPayment : acc,
+            0
+        )
+
+        // apply additional payments to each loan with reduce.. maybe reuse applyPayment method here?
+        loanTrackCopy = loanTrackCopy.reduce(applyAdditionalPaymentReduce, {loans: [], payment: leftOverPaymentSum + props.additionalPayment}).loans;
+        console.log(i, loanTrackCopy)
+
+        monthlyUpdates.push(loanTrackCopy);
     }
 
     console.log(monthlyUpdates);
     return (
         <div>
-            <p>Total Loan Cost: {
+            <p>Total Cost of Loans: {
                 monthlyUpdates.flatMap(month => month.map(loan => loan.totalPayment))
                     .reduce((a,b) => a + b).toFixed(2)
             }</p>

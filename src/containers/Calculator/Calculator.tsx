@@ -20,9 +20,21 @@ class Calculator extends React.Component {
     state: CalculatorState = {
         loans: [
             {
-                principal: 0,
+                principal: 10000,
                 interestRate: 0,
-                loanLength: 1,
+                loanLength: 10,
+                loanMonthlyPayment: 0,
+            },
+            {
+                principal: 10000,
+                interestRate: 0,
+                loanLength: 10,
+                loanMonthlyPayment: 0,
+            },
+            {
+                principal: 10000,
+                interestRate: 0,
+                loanLength: 10,
                 loanMonthlyPayment: 0,
             },
         ],
