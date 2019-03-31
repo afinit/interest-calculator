@@ -9,20 +9,15 @@ interface LoanTrack {
     loanMonthlyPayment: number;
     interestPayment: number;
     principalPayment: number;
-    totalPayment: number;
     [key: string]: number;
 }
 
 const createLoanTrackCopies = (loans: Array<LoanState>) => {
     return loans.map(loan => {
         return {
-            principal: loan.principal,
-            interestRate: loan.interestRate,
-            loanLength: loan.loanLength,
-            loanMonthlyPayment: loan.loanMonthlyPayment,
+            ...loan,
             interestPayment: 0,
             principalPayment: 0,
-            totalPayment: 0
         }
     })
 }
@@ -35,7 +30,6 @@ const applyPayment = (loan: LoanTrack, payment: number) => {
 
     loanCopy.principal -= appliedPayment;
     loanCopy.principalPayment += appliedPayment;
-    loanCopy.totalPayment += appliedPayment;
 
     return loanCopy;
 }
@@ -52,7 +46,6 @@ const applyRawPayment = (loan: LoanTrack) => {
 
     const adjLoan = applyPayment(loan, payment);
     adjLoan.interestPayment = interestPayment;
-    adjLoan.totalPayment += interestPayment;
 
     return adjLoan;
 }
@@ -101,8 +94,8 @@ const paymentTable = (props: CalculatorState) => {
         // calculate remainder payment from paid off loans.. combine with props.additionalPayment
         const leftOverPaymentSum = loanTrackCopy.reduce(
             (acc, loan) =>
-                (loan.loanMonthlyPayment - loan.totalPayment) > 0.005 ?
-                    acc + loan.loanMonthlyPayment - loan.totalPayment : acc,
+                (loan.loanMonthlyPayment - loan.interestPayment - loan.principalPayment) > 0.005 ?
+                    acc + loan.loanMonthlyPayment - loan.interestPayment - loan.principalPayment : acc,
             0
         )
 
@@ -116,7 +109,7 @@ const paymentTable = (props: CalculatorState) => {
     return (
         <div>
             <p>Total Cost of Loans: {
-                monthlyUpdates.flatMap(month => month.map(loan => loan.totalPayment))
+                monthlyUpdates.flatMap(month => month.map(loan => loan.interestPayment + loan.principalPayment))
                     .reduce((a,b) => a + b).toFixed(2)
             }</p>
             <table>
