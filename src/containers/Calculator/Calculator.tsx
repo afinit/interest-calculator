@@ -14,6 +14,7 @@ export interface LoanState {
 export interface CalculatorState {
     loans: Array<LoanState>;
     additionalPayment: number;
+    applyClosedLoanPayment: boolean;
 }
 
 class Calculator extends React.Component {
@@ -21,24 +22,25 @@ class Calculator extends React.Component {
         loans: [
             {
                 principal: 10000,
-                interestRate: 0,
+                interestRate: 0.1,
                 loanLength: 10,
                 loanMonthlyPayment: 0,
             },
             {
                 principal: 10000,
-                interestRate: 0,
+                interestRate: 0.05,
                 loanLength: 10,
                 loanMonthlyPayment: 0,
             },
             {
                 principal: 10000,
-                interestRate: 0,
+                interestRate: 0.12,
                 loanLength: 10,
                 loanMonthlyPayment: 0,
             },
         ],
         additionalPayment: 0,
+        applyClosedLoanPayment: true,
     }
 
     onChangeLoanInput = (field: string, newValue: number, idx: number) => {
@@ -129,14 +131,14 @@ class Calculator extends React.Component {
                             min="0"
                             step="1" />
                 </div>
-                <div>Total Monthly Payment: {
+                <div>Total Monthly Payment (not including Additional Payment): {
                     loans.map(loan => loan.loanMonthlyPayment)
                         .reduce((total, monthly) => total + monthly)
                         .toFixed(2)
                 }</div>
                 {/* <div>Total Payment: {(loan.loanMonthlyPayment * loan.loanLength).toFixed(2)}</div> */}
                 <button style={{ margin: "10px" }} onClick={this.addLoan}>Add Loan</button>
-                <PaymentTable loans={this.state.loans} additionalPayment={this.state.additionalPayment} />
+                <PaymentTable {...this.state}/>
             </>
         )
     }

@@ -2,7 +2,7 @@ import React from 'react';
 
 import { LoanState, CalculatorState } from '../../containers/Calculator/Calculator';
 
-interface LoanTrack {
+interface PaymentTableRow {
     principal: number;
     interestRate: number;
     loanLength: number;
@@ -13,7 +13,7 @@ interface LoanTrack {
     [key: string]: number;
 }
 
-const createLoanTrackCopies = (loans: Array<LoanTrack>) => {
+const createLoanTrackCopies = (loans: Array<PaymentTableRow>) => {
     return loans.map(loan => {
         return {
             principal: loan.principal,
@@ -27,7 +27,7 @@ const createLoanTrackCopies = (loans: Array<LoanTrack>) => {
     })
 }
 
-const applyPayment = (loan: LoanTrack, payment: number) => {
+const applyPayment = (loan: PaymentTableRow, payment: number) => {
     const loanCopy = {...loan};
     let appliedPayment = payment;
 
@@ -40,7 +40,7 @@ const applyPayment = (loan: LoanTrack, payment: number) => {
     return loanCopy;
 }
 
-const applyRawPayment = (loan: LoanTrack) => {
+const applyRawPayment = (loan: PaymentTableRow) => {
     let payment = 0;
     let interestPayment = 0;
 
@@ -57,7 +57,7 @@ const applyRawPayment = (loan: LoanTrack) => {
     return adjLoan;
 }
 
-const applyAdditionalPayment = (loans: Array<LoanTrack>, payment: number) => {
+const applyAdditionalPayment = (loans: Array<PaymentTableRow>, payment: number) => {
     const adjLoans = [];
     let paymentLeft = payment;
 
@@ -70,7 +70,7 @@ const applyAdditionalPayment = (loans: Array<LoanTrack>, payment: number) => {
     return adjLoans;
 }
 
-const applyAdditionalPaymentReduce = (acc: {loans: Array<LoanTrack>, payment: number}, loan: LoanTrack) => {
+const applyAdditionalPaymentReduce = (acc: {loans: Array<PaymentTableRow>, payment: number}, loan: PaymentTableRow) => {
     const adjLoan = applyPayment(loan, acc.payment);
     const payment = acc.payment - (loan.principal - adjLoan.principal);
 
@@ -79,7 +79,7 @@ const applyAdditionalPaymentReduce = (acc: {loans: Array<LoanTrack>, payment: nu
 
 const paymentTable = (props: CalculatorState) => {
     const loansCopy: Array<LoanState> = JSON.parse(JSON.stringify(props.loans));
-    const loanTrack: Array<LoanTrack> = loansCopy.map((loan: LoanState) => {
+    const loanTrack: Array<PaymentTableRow> = loansCopy.map((loan: LoanState) => {
         return { ...loan, interestPayment: 0, principalPayment: 0, totalPayment: 0 }
     })
     .sort((a, b) => {
@@ -87,27 +87,19 @@ const paymentTable = (props: CalculatorState) => {
         else if (a.interestRate < b.interestRate) return 1
         else return 0
     });
-    // const interestRates = props.loans.map(loan => loan.interestRate);
-    // const loanIdxSorted = interestRates.map((rate, idx) => [rate, idx])
-    //     .sort((a,b) => a[0] - b[0])
-    //     .map(x => x[1]);
 
-    let monthlyUpdates: Array<Array<LoanTrack>> = [];
+    let monthlyUpdates: Array<Array<PaymentTableRow>> = [];
 
-    // var totalPrincipal = loans.map(loan => loan.principal).reduce((acc, elem) => acc + elem);
     const longestLoan = Math.max(...loanTrack.map(loan => loan.loanLength))
     console.log("longestLoan: ", longestLoan);
 
     for (let i = 0; i < longestLoan; i++) {
-        let loanTrackCopy: Array<LoanTrack> = monthlyUpdates.length === 0 ? 
+        let loanTrackCopy: Array<PaymentTableRow> = monthlyUpdates.length === 0 ? 
             createLoanTrackCopies(loanTrack) : 
             createLoanTrackCopies(monthlyUpdates[monthlyUpdates.length - 1]);
 
-        console.log(i, loanTrackCopy)
-
         // apply array of raw payment to each loan
         loanTrackCopy = loanTrackCopy.map(applyRawPayment);
-        console.log(i, loanTrackCopy)
 
         // calculate remainder payment from paid off loans.. combine with props.additionalPayment
         const leftOverPaymentSum = loanTrackCopy.reduce(
@@ -119,7 +111,6 @@ const paymentTable = (props: CalculatorState) => {
 
         // apply additional payments to each loan with reduce.. maybe reuse applyPayment method here?
         loanTrackCopy = loanTrackCopy.reduce(applyAdditionalPaymentReduce, {loans: [], payment: leftOverPaymentSum + props.additionalPayment}).loans;
-        console.log(i, loanTrackCopy)
 
         monthlyUpdates.push(loanTrackCopy);
     }
@@ -138,7 +129,6 @@ const paymentTable = (props: CalculatorState) => {
                         <th>Principal</th>
                         <th>Interest Payment</th>
                         <th>Principal Payment</th>
-                        <th>Total Payment</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,7 +138,6 @@ const paymentTable = (props: CalculatorState) => {
                             <td>{month.map(loan => loan.principal).reduce((a, b) => a + b).toFixed(2)}</td>
                             <td>{month.map(loan => loan.interestPayment).reduce((a, b) => a + b).toFixed(2)}</td>
                             <td>{month.map(loan => loan.principalPayment).reduce((a, b) => a + b).toFixed(2)}</td>
-                            <td>{month.map(loan => loan.totalPayment).reduce((a, b) => a + b).toFixed(2)}</td>
                         </tr>
                     )}
                 </tbody>
