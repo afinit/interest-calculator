@@ -70,8 +70,8 @@ const applyAdditionalPaymentReduce = (acc: {loans: Array<LoanTrack>, payment: nu
     return {loans: acc.loans.concat(adjLoan), payment};
 }
 
-const paymentTable = (props: CalculatorState) => {
-    const loanTrack: Array<LoanTrack> = createLoanTrackCopies(props.loans)
+const calcMonthlyUpdates = (loans: Array<LoanState>, additionalPayment: number, applyClosedLoanPayment: boolean) => {
+    const loanTrack: Array<LoanTrack> = createLoanTrackCopies(loans)
         .sort((a, b) => {
             if(a.interestRate > b.interestRate) return -1
             else if (a.interestRate < b.interestRate) return 1
@@ -100,18 +100,41 @@ const paymentTable = (props: CalculatorState) => {
         )
 
         // apply additional payments to each loan with reduce.. maybe reuse applyPayment method here?
-        loanTrackCopy = loanTrackCopy.reduce(applyAdditionalPaymentReduce, {loans: [], payment: leftOverPaymentSum + props.additionalPayment}).loans;
+        loanTrackCopy = loanTrackCopy.reduce(applyAdditionalPaymentReduce, {loans: [], payment: leftOverPaymentSum + additionalPayment}).loans;
 
         monthlyUpdates.push(loanTrackCopy);
     }
 
+    return monthlyUpdates;
+}
+
+const paymentTable = (props: CalculatorState) => {
+    const monthlyUpdates = calcMonthlyUpdates(props.loans, 0, props.applyClosedLoanPayment);
+
+    let monthlyUpdatesWAdd: Array<Array<LoanTrack>> = [];
+    if (props.additionalPayment > 0) {
+        monthlyUpdatesWAdd = calcMonthlyUpdates(props.loans, props.additionalPayment, props.applyClosedLoanPayment);
+    }
     console.log(monthlyUpdates);
+
+    const additionalPaymentHeader = [
+        <th key="thPrinc">Principal with Add</th>,
+        <th key="thIntPay">Interest Payment with Add</th>,
+        <th key="thPrincPay">Principal Payment with Add</th>
+    ]
+
     return (
         <div>
             <p>Total Cost of Loans: {
                 monthlyUpdates.flatMap(month => month.map(loan => loan.interestPayment + loan.principalPayment))
                     .reduce((a,b) => a + b).toFixed(2)
             }</p>
+            {props.additionalPayment > 0 ?
+                <p>Total Cost of Loans with Additional Payment: {
+                    monthlyUpdatesWAdd.flatMap(month => month.map(loan => loan.interestPayment + loan.principalPayment))
+                        .reduce((a,b) => a + b).toFixed(2)
+                }</p> : null
+            }
             <table>
                 <thead>
                     <tr>
@@ -119,6 +142,7 @@ const paymentTable = (props: CalculatorState) => {
                         <th>Principal</th>
                         <th>Interest Payment</th>
                         <th>Principal Payment</th>
+                        {props.additionalPayment > 0 ? additionalPaymentHeader : null }
                     </tr>
                 </thead>
                 <tbody>
@@ -128,6 +152,13 @@ const paymentTable = (props: CalculatorState) => {
                             <td>{month.map(loan => loan.principal).reduce((a, b) => a + b).toFixed(2)}</td>
                             <td>{month.map(loan => loan.interestPayment).reduce((a, b) => a + b).toFixed(2)}</td>
                             <td>{month.map(loan => loan.principalPayment).reduce((a, b) => a + b).toFixed(2)}</td>
+                            {props.additionalPayment > 0 ?
+                                [
+                                    <td key="tdPrinc">{monthlyUpdatesWAdd[idx].map(loan => loan.principal).reduce((a, b) => a + b).toFixed(2)}</td>,
+                                    <td key="tdIntPay">{monthlyUpdatesWAdd[idx].map(loan => loan.interestPayment).reduce((a, b) => a + b).toFixed(2)}</td>,
+                                    <td key="tdPrincPay">{monthlyUpdatesWAdd[idx].map(loan => loan.principalPayment).reduce((a, b) => a + b).toFixed(2)}</td>
+                                ] : null
+                            }
                         </tr>
                     )}
                 </tbody>
