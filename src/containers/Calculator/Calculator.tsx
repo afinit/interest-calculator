@@ -14,6 +14,7 @@ export interface LoanState {
 export interface CalculatorState {
     loans: Array<LoanState>;
     additionalPayment: number;
+    savingsInterestRate: number;
     applyClosedLoanPayment: boolean;
 }
 
@@ -40,6 +41,7 @@ class Calculator extends React.Component {
             },
         ],
         additionalPayment: 0,
+        savingsInterestRate: 0,
         applyClosedLoanPayment: true,
     }
 
@@ -53,9 +55,8 @@ class Calculator extends React.Component {
         })
     }
 
-    onChangePayment = (value: number) => {
-        this.setState({ additionalPayment: value })
-    }
+    onChangePayment = (value: number) => this.setState({ additionalPayment: value })
+    onChangeSavingsRate = (value: number) => this.setState({ savingsInterestRate: value })
 
     calculateMonthlyPayment = (loan: LoanState) => {
         let monthly = loan.principal / loan.loanLength;
@@ -130,6 +131,15 @@ class Calculator extends React.Component {
                             onChange={(event) => this.onChangePayment(+event.target.value)}
                             min="0"
                             step="1" />
+                </div>
+                <div>
+                    Savings Interest Rate:
+                    <input 
+                        type="number"
+                        value={this.state.savingsInterestRate}
+                        onChange={event => this.onChangeSavingsRate(+event.target.value)}
+                        min="0"
+                        step="0.01"/>
                 </div>
                 <div>Total Monthly Payment (not including Additional Payment): {
                     loans.map(loan => loan.loanMonthlyPayment)
