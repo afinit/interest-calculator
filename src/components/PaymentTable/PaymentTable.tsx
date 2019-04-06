@@ -118,7 +118,7 @@ const calcMonthlyUpdates = (loans: Array<LoanState>, additionalPayment: number, 
         // apply additional payments to each loan with reduce.. maybe reuse applyPayment method here?
         const additionalPaymentResult = moUpLoans.reduce(applyAdditionalPaymentReduce, {loans: [], payment: leftOverPaymentSum + additionalPayment});
         moUpLoans = additionalPaymentResult.loans;
-        moUpCopy.cashAcc *= 1 + savingsInterestRate;
+        moUpCopy.cashAcc *= 1 + (savingsInterestRate / 12.0);
         moUpCopy.cashAcc += additionalPaymentResult.payment + extraSavings;
         moUpCopy.loans = moUpLoans;
 
